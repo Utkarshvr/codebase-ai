@@ -1,3 +1,41 @@
+const GITHUB_HEADERS: HeadersInit = {
+  Accept: "application/vnd.github+json",
+  ...(process.env.GITHUB_TOKEN
+    ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` }
+    : {}),
+};
+
+export type RepoInfo = {
+  exists: boolean;
+  public: boolean;
+  fullName?: string;
+  description?: string | null;
+};
+
+export async function getRepoInfo(owner: string, repo: string): Promise<RepoInfo> {
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}`,
+    { headers: GITHUB_HEADERS },
+  );
+
+  if (response.status === 404) {
+    return { exists: false, public: false };
+  }
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch repo info: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  return {
+    exists: true,
+    public: !data.private,
+    fullName: data.full_name,
+    description: data.description,
+  };
+}
+
 export async function getRepoTree(
   owner: string,
   repo: string,
@@ -5,6 +43,7 @@ export async function getRepoTree(
 ) {
   const response = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`,
+    { headers: GITHUB_HEADERS },
   );
 
   if (!response.ok) {
@@ -19,6 +58,7 @@ export async function getRepoTree(
 export async function getBlob(owner: string, repo: string, sha: string) {
   const response = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/git/blobs/${sha}`,
+    { headers: GITHUB_HEADERS },
   );
 
   if (!response.ok) {
@@ -33,6 +73,7 @@ export async function getBlob(owner: string, repo: string, sha: string) {
 export async function getFileContent(owner: string, repo: string, sha: string) {
   const response = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/git/blobs/${sha}`,
+    { headers: GITHUB_HEADERS },
   );
 
   if (!response.ok) {
@@ -52,11 +93,12 @@ export async function getRepositoryFiles(
   const tree = await getRepoTree(owner, repo, branch);
 
   const files = tree.filter(
-    (item) => item.type === "blob" && isCodeFile(item.path),
+    (item: { type: string; path: string }) =>
+      item.type === "blob" && isCodeFile(item.path),
   );
 
   const results = await Promise.all(
-    files.map(async (file) => {
+    files.map(async (file: { path: string; sha: string }) => {
       const code = await getFileContent(owner, repo, file.sha);
 
       return {

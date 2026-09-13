@@ -3,36 +3,71 @@
 import { useState } from "react";
 import styles from "./page.module.css";
 
+type AskResponse = {
+  answer?: string;
+  error?: string;
+  repo?: string;
+  fromCache?: boolean;
+  indexStats?: { files: number; chunks: number };
+};
+
 export default function Home() {
+  const [owner, setOwner] = useState("");
+  const [repo, setRepo] = useState("");
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
+  const [status, setStatus] = useState<string | null>(null);
+  const [meta, setMeta] = useState<Pick<
+    AskResponse,
+    "repo" | "fromCache" | "indexStats"
+  > | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const fullRepo =
+    owner.trim() && repo.trim() ? `${owner.trim()}/${repo.trim()}` : null;
+
+  const canSubmit =
+    owner.trim() && repo.trim() && question.trim() && !loading;
 
   async function askQuestion() {
-    if (!question.trim()) return;
+    if (!canSubmit) return;
 
     setLoading(true);
     setAnswer("");
+    setError("");
+    setMeta(null);
+    setStatus("Checking repository and preparing your answer…");
 
     try {
       const response = await fetch("/api/ask", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          question,
-          repo: "Utkarshvr/shipment-rate-api",
+          question: question.trim(),
+          owner: owner.trim(),
+          repo: repo.trim(),
         }),
       });
 
-      const data = await response.json();
+      const data: AskResponse = await response.json();
 
-      setAnswer(data.answer || data.error);
+      if (!response.ok) {
+        setError(data.error || "Something went wrong.");
+        return;
+      }
+
+      setAnswer(data.answer || "");
+      setMeta({
+        repo: data.repo,
+        fromCache: data.fromCache,
+        indexStats: data.indexStats,
+      });
     } catch {
-      setAnswer("Something went wrong.");
+      setError("Network error. Please try again.");
     } finally {
       setLoading(false);
+      setStatus(null);
     }
   }
 
@@ -40,26 +75,71 @@ export default function Home() {
     <main className={styles.container}>
       <div className={styles.wrapper}>
         <header className={styles.header}>
-          <div className={styles.logo}>CODEBASE AI</div>
-
-          <h1 className={styles.title}>Ask your codebase.</h1>
-
+          <div className={styles.badge}>Codebase AI</div>
+          <h1 className={styles.title}>Ask any public repository</h1>
           <p className={styles.subtitle}>
-            Understand your repository using natural language.
+            Enter a GitHub repo, ask a question, and get answers grounded in
+            the source code. New repos are indexed automatically.
           </p>
-
-          <div className={styles.repo}>
-            <span className={styles.repoDot} />
-            Utkarshvr/shipment-rate-api
-          </div>
         </header>
 
+        <section className={styles.repoCard}>
+          <div className={styles.repoCardHeader}>
+            <span className={styles.repoLabel}>Repository</span>
+            {fullRepo && (
+              <span className={styles.repoPreview}>
+                <span className={styles.repoDot} />
+                github.com/{fullRepo}
+              </span>
+            )}
+          </div>
+
+          <div className={styles.repoInputs}>
+            <div className={styles.inputGroup}>
+              <label className={styles.fieldLabel} htmlFor="owner">
+                Owner
+              </label>
+              <input
+                id="owner"
+                className={styles.input}
+                value={owner}
+                onChange={(e) => setOwner(e.target.value)}
+                placeholder="facebook"
+                spellCheck={false}
+                autoComplete="off"
+              />
+            </div>
+
+            <span className={styles.repoSlash}>/</span>
+
+            <div className={styles.inputGroup}>
+              <label className={styles.fieldLabel} htmlFor="repo">
+                Repository
+              </label>
+              <input
+                id="repo"
+                className={styles.input}
+                value={repo}
+                onChange={(e) => setRepo(e.target.value)}
+                placeholder="react"
+                spellCheck={false}
+                autoComplete="off"
+              />
+            </div>
+          </div>
+        </section>
+
         <section className={styles.inputCard}>
+          <label className={styles.fieldLabel} htmlFor="question">
+            Your question
+          </label>
+
           <textarea
+            id="question"
             className={styles.textarea}
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="How is the shipping rate calculated?"
+            placeholder="How does the virtual DOM reconciliation work?"
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                 askQuestion();
@@ -68,25 +148,60 @@ export default function Home() {
           />
 
           <div className={styles.inputFooter}>
+            <span className={styles.hint}>Ctrl + Enter to submit</span>
             <button
               className={styles.button}
               onClick={askQuestion}
-              disabled={loading || !question.trim()}
+              disabled={!canSubmit}
             >
-              {loading ? "Thinking..." : "Ask →"}
+              {loading ? "Working…" : "Ask →"}
             </button>
           </div>
         </section>
 
-        {answer ? (
-          <section className={styles.answer}>
-            <div className={styles.answerHeader}>AI RESPONSE</div>
+        {loading && status && (
+          <div className={styles.statusBanner}>
+            <span className={styles.spinner} />
+            {status}
+          </div>
+        )}
 
+        {error && (
+          <section className={styles.errorCard}>
+            <div className={styles.errorHeader}>Error</div>
+            <div className={styles.errorBody}>{error}</div>
+          </section>
+        )}
+
+        {answer && !error && (
+          <section className={styles.answer}>
+            <div className={styles.answerHeader}>
+              <span>Answer</span>
+              {meta && (
+                <span className={styles.answerMeta}>
+                  {meta.fromCache ? (
+                    <>Used existing index for {meta.repo}</>
+                  ) : (
+                    <>
+                      Indexed {meta.indexStats?.files ?? 0} files (
+                      {meta.indexStats?.chunks ?? 0} chunks) · {meta.repo}
+                    </>
+                  )}
+                </span>
+              )}
+            </div>
             <div className={styles.answerBody}>{answer}</div>
           </section>
-        ) : (
+        )}
+
+        {!answer && !error && !loading && (
           <div className={styles.empty}>
-            Ask a question about the repository to get started.
+            <div className={styles.emptyIcon}>⌘</div>
+            <p>Pick a public repo and ask anything about its codebase.</p>
+            <p className={styles.emptyHint}>
+              First-time repos are fetched from GitHub, chunked, and stored in
+              the vector index before answering.
+            </p>
           </div>
         )}
       </div>
