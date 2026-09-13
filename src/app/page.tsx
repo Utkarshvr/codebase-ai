@@ -3,16 +3,44 @@
 import { useState } from "react";
 import styles from "./page.module.css";
 
+type AskResponse = {
+  answer?: string;
+  error?: string;
+  repo?: string;
+  fromCache?: boolean;
+  indexStats?: {
+    files: number;
+    chunks: number;
+  };
+};
+
 export default function Home() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
+  const [status, setStatus] = useState<string | null>(null);
+  const [meta, setMeta] = useState<
+    Pick<AskResponse, "repo" | "fromCache" | "indexStats"> | null
+  >(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Replace this later with the repository selected
+  // from your GitHub repo selector.
+  const owner = "Utkarshvr";
+  const repo = "shipment-rate-api";
+
+  const fullRepo = `${owner}/${repo}`;
+
+  const canSubmit = question.trim() && !loading;
 
   async function askQuestion() {
-    if (!question.trim()) return;
+    if (!canSubmit) return;
 
     setLoading(true);
     setAnswer("");
+    setError("");
+    setMeta(null);
+    setStatus("Preparing your answer…");
 
     try {
       const response = await fetch("/api/ask", {
@@ -21,18 +49,31 @@ export default function Home() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          question,
-          repo: "Utkarshvr/shipment-rate-api",
+          question: question.trim(),
+          owner,
+          repo,
         }),
       });
 
-      const data = await response.json();
+      const data: AskResponse = await response.json();
 
-      setAnswer(data.answer || data.error);
+      if (!response.ok) {
+        setError(data.error || "Something went wrong.");
+        return;
+      }
+
+      setAnswer(data.answer || "");
+
+      setMeta({
+        repo: data.repo,
+        fromCache: data.fromCache,
+        indexStats: data.indexStats,
+      });
     } catch {
-      setAnswer("Something went wrong.");
+      setError("Network error. Please try again.");
     } finally {
       setLoading(false);
+      setStatus(null);
     }
   }
 
@@ -50,12 +91,17 @@ export default function Home() {
 
           <div className={styles.repo}>
             <span className={styles.repoDot} />
-            Utkarshvr/shipment-rate-api
+            <span>github.com/{fullRepo}</span>
           </div>
         </header>
 
         <section className={styles.inputCard}>
+          <label className={styles.fieldLabel} htmlFor="question">
+            Your question
+          </label>
+
           <textarea
+            id="question"
             className={styles.textarea}
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
@@ -68,25 +114,60 @@ export default function Home() {
           />
 
           <div className={styles.inputFooter}>
+            <span className={styles.hint}>Ctrl + Enter to submit</span>
+
             <button
               className={styles.button}
               onClick={askQuestion}
-              disabled={loading || !question.trim()}
+              disabled={!canSubmit}
             >
               {loading ? "Thinking..." : "Ask →"}
             </button>
           </div>
         </section>
 
-        {answer ? (
+        {loading && status && (
+          <div className={styles.statusBanner}>
+            <span className={styles.spinner} />
+            {status}
+          </div>
+        )}
+
+        {error && (
+          <section className={styles.errorCard}>
+            <div className={styles.errorHeader}>Error</div>
+            <div className={styles.errorBody}>{error}</div>
+          </section>
+        )}
+
+        {answer && !error && (
           <section className={styles.answer}>
-            <div className={styles.answerHeader}>AI RESPONSE</div>
+            <div className={styles.answerHeader}>
+              <span>AI RESPONSE</span>
+
+              {meta && (
+                <span className={styles.answerMeta}>
+                  {meta.fromCache
+                    ? `Using existing index · ${meta.repo}`
+                    : `Indexed ${meta.indexStats?.files ?? 0} files · ${
+                        meta.indexStats?.chunks ?? 0
+                      } chunks · ${meta.repo}`}
+                </span>
+              )}
+            </div>
 
             <div className={styles.answerBody}>{answer}</div>
           </section>
-        ) : (
+        )}
+
+        {!answer && !error && !loading && (
           <div className={styles.empty}>
-            Ask a question about the repository to get started.
+            <div className={styles.emptyIcon}>⌘</div>
+            <p>Ask anything about your repository.</p>
+            <p className={styles.emptyHint}>
+              Codebase AI will search the source code and generate an
+              answer grounded in your repository.
+            </p>
           </div>
         )}
       </div>
