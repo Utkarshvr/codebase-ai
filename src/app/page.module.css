@@ -1,0 +1,180 @@
+.container {
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: #ededed;
+  display: flex;
+  justify-content: center;
+  padding: 48px 20px;
+}
+
+.wrapper {
+  width: 100%;
+  max-width: 850px;
+}
+
+/* Header */
+
+.header {
+  margin-bottom: 28px;
+}
+
+.logo {
+  font-size: 14px;
+  font-weight: 600;
+  color: #888;
+  letter-spacing: 0.02em;
+  margin-bottom: 12px;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.subtitle {
+  color: #777;
+  font-size: 15px;
+  margin-top: 8px;
+}
+
+/* Repository */
+
+.repo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 7px 11px;
+  border: 1px solid #242424;
+  border-radius: 8px;
+  background: #111;
+  color: #aaa;
+  font-size: 13px;
+  font-family: monospace;
+}
+
+.repoDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4ade80;
+}
+
+/* Question box */
+
+.inputCard {
+  margin-top: 28px;
+  border: 1px solid #292929;
+  background: #111;
+  border-radius: 14px;
+  padding: 14px;
+  transition: border-color 0.2s ease;
+}
+
+.inputCard:focus-within {
+  border-color: #444;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 130px;
+  resize: vertical;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #ededed;
+  font-size: 15px;
+  line-height: 1.6;
+  font-family: inherit;
+}
+
+.textarea::placeholder {
+  color: #555;
+}
+
+.inputFooter {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.button {
+  border: none;
+  border-radius: 8px;
+  background: #ededed;
+  color: #0a0a0a;
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    opacity 0.2s ease,
+    transform 0.1s ease;
+}
+
+.button:hover {
+  opacity: 0.88;
+}
+
+.button:active {
+  transform: scale(0.98);
+}
+
+.button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Answer */
+
+.answer {
+  margin-top: 32px;
+  border: 1px solid #242424;
+  border-radius: 14px;
+  background: #101010;
+  overflow: hidden;
+}
+
+.answerHeader {
+  padding: 13px 16px;
+  border-bottom: 1px solid #222;
+  color: #999;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.answerBody {
+  padding: 20px;
+  color: #d4d4d4;
+  font-size: 15px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+/* Empty state */
+
+.empty {
+  margin-top: 45px;
+  text-align: center;
+  color: #444;
+  font-size: 13px;
+}
+
+/* Mobile */
+
+@media (max-width: 600px) {
+  .container {
+    padding: 30px 16px;
+  }
+
+  .title {
+    font-size: 27px;
+  }
+
+  .textarea {
+    min-height: 110px;
+  }
+}
